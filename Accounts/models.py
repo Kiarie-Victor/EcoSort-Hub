@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import phonenumbers
+from Utils.uuid_field import UUIDGenerator
 # Create your models here.
 class MemberManager(BaseUserManager):
     def create_user(self, email, username, phone_number, password=None, **extra_fields):
@@ -30,7 +31,7 @@ class MemberManager(BaseUserManager):
 
         return self.create_user(email, username, phone_number, password, **extra_fields)
 
-class Member(AbstractBaseUser, PermissionsMixin):
+class Member(AbstractBaseUser, PermissionsMixin, UUIDGenerator, models.Model):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=100, unique=True)
     phone_number = models.CharField(max_length=15, unique=True)
