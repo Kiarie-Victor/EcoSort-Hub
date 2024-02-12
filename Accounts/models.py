@@ -46,3 +46,10 @@ class Member(AbstractBaseUser, PermissionsMixin, UUIDGenerator, models.Model):
 
     def __str__(self):
         return self.username
+
+
+class Otp(models.Model):
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
