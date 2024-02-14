@@ -139,3 +139,8 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': False
 
 }
+
+AUTHENTICATION_BACKENDS = [
+    'Accounts.backends.email_backend.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
