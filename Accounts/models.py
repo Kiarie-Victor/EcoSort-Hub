@@ -4,7 +4,7 @@ import phonenumbers
 from Utils.uuid_field import UUIDGenerator
 # Create your models here.
 class MemberManager(BaseUserManager):
-    def create_user(self, email, username, phone_number, password=None, **extra_fields):
+    def create_user(self, email, username, phone_number, location, password=None, **extra_fields):
         if not email:
             raise ValueError('The email field cannot be empty')
 
@@ -19,22 +19,23 @@ class MemberManager(BaseUserManager):
         except phonenumbers.NumberParseException:
             raise ValueError('The phone number is not valid')
 
-        user = self.model(email=email, username=username, phone_number=phone_number, **extra_fields)
+        user = self.model(email=email, username=username, phone_number=phone_number, location = location **extra_fields)
         user.set_password(password)
         user.save(using = self._db)
         return user
 
-    def create_superuser(self, email, username, phone_number, password=None, **extra_fields):
+    def create_superuser(self, email, username, phone_number, location, password=None,  **extra_fields):
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
-        return self.create_user(email, username, phone_number, password, **extra_fields)
+        return self.create_user(email, username, phone_number, password, location=location **extra_fields)
 
 class Member(AbstractBaseUser, PermissionsMixin, UUIDGenerator, models.Model):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=100, unique=True)
     phone_number = models.CharField(max_length=15, unique=True)
+    location = models.CharField(max_length=20)
     password = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -58,4 +59,5 @@ class PendingUserModel(models.Model):
     username = models.CharField(max_length=20)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=15)
+    location = models.CharField(max_length=20)
     password = models.CharField(max_length=20)

@@ -8,7 +8,7 @@ from django.contrib.auth import login,authenticate,get_user_model
 class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Member
-        fields = ("email", "username", "phone_number",
+        fields = ("email", "username", "phone_number", "location",
                   "password")
     def create(self, validated_data):
         user = get_user_model().objects.create_user(**validated_data)
@@ -39,6 +39,7 @@ class PendingDataSerializer(serializers.Serializer):
     username = serializers.CharField()
     email = serializers.EmailField()
     phone_number = serializers.CharField()
+    location = serializers.CharField()
     password = serializers.CharField()
 
     def validate_username(self, username: str):
@@ -51,6 +52,12 @@ class PendingDataSerializer(serializers.Serializer):
                 'This username is already taken.')
 
         return username
+
+    def validate_location(self, location:str):
+        if not location.strip():
+            raise serializers.ValidationError('Must provide location')
+
+        return location
 
     def validate_email(self, email):
         if not email.strip():

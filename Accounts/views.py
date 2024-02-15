@@ -97,6 +97,7 @@ class OtpVerification(APIView):
                         "email": pending_user.email,
                         "phone_number": pending_user.phone_number,
                         "password": pending_user.password,
+                        "location":pending_user.location
                     }
 
                     user = RegistrationSerializer(data=data)
