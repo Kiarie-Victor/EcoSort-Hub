@@ -1,9 +1,15 @@
 import random
-from main.models import DidYouKnow
+from main.models import EnvironmentalTipModel
 
 def didYouKnowMessage():
-    random_fact = DidYoKnow.objects.order_by('?').first()
-    if random_fact:
-        return random_fact.message
-    
-    return None
+    tip = EnvironmentalTipModel.objects.order_by('?').first()
+
+    data = {
+        'category':tip.category,
+        'content':tip.content
+    }
+
+    if data:
+        return data
+
+    return none

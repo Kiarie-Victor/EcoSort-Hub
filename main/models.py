@@ -2,5 +2,11 @@ from django.db import models
 
 # Create your models here.
 
-class DidYouKnow(models.Model):
-    message = models.TextField()
+class EnvironmentalTipModel(models.Model):
+    category = models.CharField(max_length=20)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.category
+    
