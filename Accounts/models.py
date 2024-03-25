@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
 import phonenumbers
 from Utils.uuid_field import UUIDGenerator
 # Create your models here.
@@ -37,6 +37,8 @@ class Member(AbstractBaseUser, PermissionsMixin, UUIDGenerator, models.Model):
     phone_number = models.CharField(max_length=15, unique=True)
     location = models.CharField(max_length=20)
     password = models.CharField(max_length=100)
+    groups = models.ManyToManyField(Group, related_name='member_group')
+    user_permissions = models.ManyToManyField(Permission,related_name='member_user_permissions')
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
