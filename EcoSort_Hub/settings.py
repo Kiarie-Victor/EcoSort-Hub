@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'main',
     'rest_framework',
     'rest_framework_simplejwt',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +75,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'EcoSort_Hub.wsgi.application'
+ASGI_APPLICATION = 'EcoSort_Hub.asgi.application'
 
 
 # Database
@@ -146,3 +149,9 @@ AUTHENTICATION_BACKENDS = [
     'Accounts.backends.email_backend.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+CHANNEL_LAYERS = {
+    'default':{
+        'BACKEND':'channels.layers.InMemoryChannelLayer'
+    }
+}
