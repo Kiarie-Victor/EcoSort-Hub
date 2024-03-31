@@ -1,123 +1,147 @@
 from django.shortcuts import render
 from rest_framework.views import APIView, Response, status
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from rest_framework.throttling import AnonRateThrottle
 from Accounts.models import PendingUserModel, Member, Otp
 from Accounts.serializers import LoginSerializer, PendingDataSerializer, RegistrationSerializer
 from django.db import transaction
 
-# Create your views here.
+# LoginView handles user login and token assignment after successful login
 
-# This login view handles the user login and token assigning after
-# successful login
+
 class LoginView(APIView):
     def post(self, request):
+        # Initialize login serializer
         serializer = LoginSerializer(
             data=request.data, context={'request': request})
         try:
-            serializer.is_valid(raise_exception = True)
+            serializer.is_valid(raise_exception=True)
             user = serializer.validated_data.get('user')
             if user is None:
+                # If user is not found, return Unauthorized response
                 return Response({'detail': 'Invalid login credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            # Refresh token assigning for a successfully logged in user
+
+            # Generate Refresh Token for the user
             refresh = RefreshToken.for_user(user=user)
 
-            # returning  response of both access and refresh tokens
+            # Return response with Access and Refresh tokens
             return Response({'access_token': str(refresh.access_token),
-                            'refresh_token': str(refresh)}, status=status.HTTP_200_OK)
+                             'refresh_token': str(refresh)}, status=status.HTTP_200_OK)
         except serializers.ValidationError as e:
+            # Handle validation error
             return Response({"errors": str(e)})
 
 
+# RegistrationView handles user registration process
 class RegistrationView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
-
+        # Initialize serializer with request data
         serializer = PendingDataSerializer(data=request.data)
         if serializer.is_valid():
             with transaction.atomic():
                 try:
-                    # get all the data from the request
+                    # Extract data from the request
                     email = serializer.validated_data['email']
                     username = serializer.validated_data['username']
                     phone_number = serializer.validated_data['phone_number']
                     password = serializer.validated_data['password']
 
-                    # handle otp generation and sending
-                    otp_code = otp_generator.otp_generator()
+                    # Generate OTP
+                    otp_code = otp_generator.otp_generate()
 
+                    # Create OTP instance and save
                     otp_instance = Otp.objects.create(otp_code=otp_code)
                     otp_instance.save()
+
+                    # Send email with OTP
                     response = email_sender.sendEmail(
                         username=username, otp_code=otp_code, email=email)
                     if response:
-                        # handling save PendingUserData
+                        # Create PendingUserModel instance and save
                         pending_user = PendingUserModel.objects.create(
                             user_otp=otp_code, username=username, email=email, phone_number=phone_number, password=password)
                         pending_user.save()
+                        # Return success response
                         return Response({'Detail': 'Otp code sent successfully'}, status=status.HTTP_200_OK)
 
+                    # Raise exception if error encountered when sending email
                     raise Exception('Error encountered when sending Email')
 
                 except Exception as e:
+                    # Handle exception
                     return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        # If serializer is not valid, return serializer errors
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# OtpVerification handles OTP verification and user registration process
 
 
 class OtpVerification(APIView):
     def post(self, request):
+        # Initialize serializer with request data
         serializer = OtpSerializer(data=request.data)
 
         if serializer.is_valid():
             otp_code = serializer.validated_data['otp_code']
             try:
+                # Ensure all database operations are atomic
                 with transaction.atomic():
                     try:
+                        # Get OTP instance by code
                         otp_instance = Otp.objects.get(otp_code=otp_code)
-
                     except Otp.DoesNotExist:
+                        # Return error response if OTP code is invalid
                         return Response({'error': 'Invalid OTP code.'}, status=status.HTTP_400_BAD_REQUEST)
 
                     if otp_expired.otp_expired(otp_timestamp=otp_instance.created_at):
+                        # Delete expired OTP instance and return error response
                         otp_instance.delete()
                         return Response({'error': "Otp Expired"}, status=status.HTTP_400_BAD_REQUEST)
 
                     try:
+                        # Get pending user by OTP code
                         pending_user = PendingUserModel.objects.get(
                             user_otp=otp_code)
-
                     except PendingUserModel.DoesNotExist:
+                        # Return error response if pending user not found
                         return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
 
+                    # Prepare data for user registration
                     data = {
                         "username": pending_user.username,
                         "email": pending_user.email,
                         "phone_number": pending_user.phone_number,
                         "password": pending_user.password,
-                        "location":pending_user.location
+                        "location": pending_user.location
                     }
 
-                    user = RegistrationSerializer(data=data)
-                    if user.is_valid():
-                        user.save()
+                    # Serialize and validate user registration data
+                    user_serializer = RegistrationSerializer(data=data)
+                    if user_serializer.is_valid():
+                        # Save user data
+                        user_serializer.save()
+                        # Delete OTP and pending user instances
                         otp_instance.delete()
                         pending_user.delete()
 
-                        # Giving the user and access and refresh token
-
+                        # Authenticate and login user
                         user_to_login = authenticate(
                             request, email=pending_user.email, password=pending_user.password)
                         login(request, user_to_login)
+                        # Generate access and refresh tokens
                         token = RefreshToken.for_user(user=user_to_login)
-                        return Response({"access": str(token.access_token),
-                                        "refresh": str(token)}, status=status.HTTP_200_OK)
+                        # Return success response with tokens
+                        return Response({"access": str(token.access_token), "refresh": str(token)}, status=status.HTTP_200_OK)
                     else:
+                        # Return error response if user data is invalid
                         return Response({'error': 'Invalid user data'}, status=status.HTTP_400_BAD_REQUEST)
 
             except Exception as e:
+                # Return error response if any internal server error occurs
                 return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Return serializer errors if validation fails
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
