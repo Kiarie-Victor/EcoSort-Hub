@@ -13,17 +13,23 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
+
+# Set the Django settings module for the ASGI application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'EcoSort_Hub.settings')
 
+# Get the Django ASGI application
 django_asgi_application = get_asgi_application()
 
+# Define the ASGI application with routing for different protocols
 application = ProtocolTypeRouter({
+    # For HTTP protocol, use the Django ASGI application
     'http': django_asgi_application,
+    # For WebSocket protocol, use allowed hosts origin validator and auth middleware stack
     'websocket': AllowedHostsOriginValidator(
-                    AuthMiddlewareStack(
-                        URLRouter(
-                            
-                        )
-                    )
+        AuthMiddlewareStack(
+            URLRouter(
+                # Add your WebSocket URL patterns here
+            )
+        )
     )
 })
