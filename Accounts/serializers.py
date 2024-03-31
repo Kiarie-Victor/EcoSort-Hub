@@ -34,7 +34,6 @@ class LoginSerializer(serializers.Serializer):
         data['user'] = user
         return data
 
-
 class PendingDataSerializer(serializers.Serializer):
     username = serializers.CharField()
     email = serializers.EmailField()

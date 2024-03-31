@@ -15,5 +15,6 @@ class Message(models.Model):
     def __str__(self):
         return self.sent_by
 
-
+    def get_last_20_messages():
+        return Message.objects.order_by('create_at').all()[:21]
     
