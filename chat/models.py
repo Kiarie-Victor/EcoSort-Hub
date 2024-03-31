@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from asgiref.sync import sync_to_async
 
 User = get_user_model()
 
@@ -15,6 +16,7 @@ class Message(models.Model):
     def __str__(self):
         return self.sent_by
 
-    def get_last_20_messages():
-        return Message.objects.order_by('create_at').all()[:21]
+    async def get_last_20_messages(self):
+        messages = await sync_to_async(Message.objects.order_by('create_at').all()[:21])
+        return messages
     
