@@ -1,0 +1,10 @@
+asgiref==3.3.4
+bcrypt==3.2.0
+channels==4.0.0
+daphne==4.0.0
+Django==5.0
+django-cors-headers==4.3.1
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+phonenumbers==8.13.27
+pytz==2022.1
