@@ -2,5 +2,6 @@ from django.urls import path
 from main import views
 
 urlpatterns = [
-    path('api/funFact', views.DidYouKnowView.as_view())
+    path('funFact', views.DidYouKnowView.as_view())
+    path('waste-category', views.WasteCategoryView.as_view())
 ]
