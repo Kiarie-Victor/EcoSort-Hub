@@ -1,10 +1,17 @@
+from rest_framework.views import APIView
+from main.serializers import MemberSerializer
+from main.models import Member
+from rest_framework import status
+from rest_framework.response import Response
 from django.shortcuts import render
 from rest_framework.views import APIView, Response, status
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle,UserRateThrottle,SimpleRateThrottle
 from Accounts.models import PendingUserModel, Member, Otp
-from Accounts.serializers import LoginSerializer, PendingDataSerializer, RegistrationSerializer
+from Accounts.serializers import LoginSerializer, PendingDataSerializer, RegistrationSerializer, MemberSerializer
 from django.db import transaction
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 # LoginView handles user login and token assignment after successful login
 
@@ -34,7 +41,7 @@ class LoginView(APIView):
 
 # RegistrationView handles user registration process
 class RegistrationView(APIView):
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AnonRateThrottle, SimpleRateThrottle]
 
     def post(self, request):
         # Initialize serializer with request data
@@ -144,4 +151,50 @@ class OtpVerification(APIView):
                 return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Return serializer errors if validation fails
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    # Throttling to limit the number of requests
+    throttle_classes = [UserRateThrottle, SimpleRateThrottle]
+    # Permission class for authentication
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Retrieve user information and serialize it
+        user = request.user
+        serializer = MemberSerializer(instance=user)
+
+        # Return user data in the response
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        # Deserialize and validate user data
+        serializer = MemberSerializer(data=request.data)
+
+        if serializer.is_valid():
+            # Extract validated data
+            email = serializer.validated_data['email']
+            username = serializer.validated_data['username']
+            phone_number = serializer.validated_data['phone_number']
+            location = serializer.validated_data['location']
+
+            try:
+                # Update user profile if user exists
+                user = Member.objects.get(username=username, email=email)
+                user.email = email
+                user.location = location
+                user.username = username
+                user.phone_number = phone_number
+                user.save()
+
+                # Return success message if profile is updated
+                return Response({'status': 'Details Updated'}, status=status.HTTP_200_OK)
+
+            except Member.DoesNotExist:
+                # Return error message if user does not exist
+                return Response({'status': 'Failed To update Info'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Return validation errors if serializer is not valid
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
