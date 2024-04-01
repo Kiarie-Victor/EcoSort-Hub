@@ -198,3 +198,22 @@ class ProfileView(APIView):
 
         # Return validation errors if serializer is not valid
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeleteProfile(APIView):
+    authentication_classes = [JWTAuthentication]
+    # Throttling for rate limiting
+    throttle_classes = [SimpleRateThrottle, UserRateThrottle]
+    # Permission class for authentication
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Retrieve authenticated user
+        user = request.user
+
+        # Retrieve and delete user object
+        user_object = Member.objects.get(username=request.user.username)
+        user_object.delete()
+
+        # Return success message after deleting profile
+        return Response({'Status': 'Profile deleted successfully'}, status=status.HTTP_200_OK)
