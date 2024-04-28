@@ -6,11 +6,15 @@ from rest_framework.views import APIView, Response, status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.throttling import AnonRateThrottle,UserRateThrottle,SimpleRateThrottle
 from Accounts.models import PendingUserModel, Member, Otp
-from Accounts.serializers import LoginSerializer, PendingDataSerializer, RegistrationSerializer, MemberSerializer
+from Accounts.serializers import LoginSerializer, PendingDataSerializer, RegistrationSerializer, MemberSerializer, OtpSerializer
 from django.db import transaction
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
-
+from Utils.otp_generator import otp_generate
+from Utils.email_sender import sendEmail
+from Utils.otp_expired import otp_expired
+from rest_framework import serializers
+from django.contrib.auth import authenticate, login
 # LoginView handles user login and token assignment after successful login
 
 
@@ -39,11 +43,12 @@ class LoginView(APIView):
 
 # RegistrationView handles user registration process
 class RegistrationView(APIView):
-    throttle_classes = [AnonRateThrottle, SimpleRateThrottle]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         # Initialize serializer with request data
         serializer = PendingDataSerializer(data=request.data)
+        print(request.data)
         if serializer.is_valid():
             with transaction.atomic():
                 try:
@@ -52,21 +57,22 @@ class RegistrationView(APIView):
                     username = serializer.validated_data['username']
                     phone_number = serializer.validated_data['phone_number']
                     password = serializer.validated_data['password']
+                    location = serializer.validated_data['location']
 
                     # Generate OTP
-                    otp_code = otp_generator.otp_generate()
+                    otp_code = otp_generate()
 
                     # Create OTP instance and save
                     otp_instance = Otp.objects.create(otp_code=otp_code)
                     otp_instance.save()
 
                     # Send email with OTP
-                    response = email_sender.sendEmail(
+                    response = sendEmail(
                         username=username, otp_code=otp_code, email=email)
                     if response:
                         # Create PendingUserModel instance and save
                         pending_user = PendingUserModel.objects.create(
-                            user_otp=otp_code, username=username, email=email, phone_number=phone_number, password=password)
+                            user_otp=otp_code, username=username, email=email, phone_number=phone_number, password=password, location=location)
                         pending_user.save()
                         # Return success response
                         return Response({'Detail': 'Otp code sent successfully'}, status=status.HTTP_200_OK)
@@ -101,9 +107,16 @@ class OtpVerification(APIView):
                         # Return error response if OTP code is invalid
                         return Response({'error': 'Invalid OTP code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                    if otp_expired.otp_expired(otp_timestamp=otp_instance.created_at):
+                    if otp_expired(otp_timestamp=otp_instance.created_at):
                         # Delete expired OTP instance and return error response
                         otp_instance.delete()
+                        
+                        # delete pending user
+                        try:
+                            pending_data = PendingUserModel.objects.get(otp_code=otp_code)
+                        except PendingUserModel.DoesNotExist:
+                            # Return error response if pending user not found
+                            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
                         return Response({'error': "Otp Expired"}, status=status.HTTP_400_BAD_REQUEST)
 
                     try:
@@ -119,8 +132,8 @@ class OtpVerification(APIView):
                         "username": pending_user.username,
                         "email": pending_user.email,
                         "phone_number": pending_user.phone_number,
-                        "password": pending_user.password,
-                        "location": pending_user.location
+                        "location": pending_user.location,
+                        "password": pending_user.password
                     }
 
                     # Serialize and validate user registration data
@@ -128,6 +141,7 @@ class OtpVerification(APIView):
                     if user_serializer.is_valid():
                         # Save user data
                         user_serializer.save()
+                        print("user created successfully")
                         # Delete OTP and pending user instances
                         otp_instance.delete()
                         pending_user.delete()
@@ -146,6 +160,7 @@ class OtpVerification(APIView):
 
             except Exception as e:
                 # Return error response if any internal server error occurs
+                print(str(e))
                 return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Return serializer errors if validation fails
@@ -155,7 +170,7 @@ class OtpVerification(APIView):
 class ProfileView(APIView):
     authentication_classes = [JWTAuthentication]
     # Throttling to limit the number of requests
-    throttle_classes = [UserRateThrottle, SimpleRateThrottle]
+    throttle_classes = [UserRateThrottle]
     # Permission class for authentication
     permission_classes = [IsAuthenticated]
 
@@ -201,7 +216,7 @@ class ProfileView(APIView):
 class DeleteProfile(APIView):
     authentication_classes = [JWTAuthentication]
     # Throttling for rate limiting
-    throttle_classes = [SimpleRateThrottle, UserRateThrottle]
+    throttle_classes = [UserRateThrottle]
     # Permission class for authentication
     permission_classes = [IsAuthenticated]
 
