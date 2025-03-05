@@ -114,6 +114,7 @@ class OtpVerification(APIView):
                         # delete pending user
                         try:
                             pending_data = PendingUserModel.objects.get(otp_code=otp_code)
+                            pending_data.delete()
                         except PendingUserModel.DoesNotExist:
                             # Return error response if pending user not found
                             return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)

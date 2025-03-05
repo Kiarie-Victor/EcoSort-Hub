@@ -9,3 +9,4 @@ class UUIDGenerator(models.Model):
     class Meta:
         # Set the model as abstract so it can be used as a base class for other models
         abstract = True
+

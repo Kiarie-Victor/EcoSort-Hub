@@ -104,16 +104,16 @@ class Member(AbstractBaseUser, PermissionsMixin, UUIDGenerator, models.Model):
     phone_number = models.CharField(max_length=15, unique=True)
     location = models.CharField(max_length=20)
     password = models.CharField(max_length=100)
-    groups = models.ManyToManyField(Group, related_name='member_group')
-    user_permissions = models.ManyToManyField(
-        Permission, related_name='member_user_permissions')
+    # groups = models.ManyToManyField(Group, related_name='member_group')
+    # user_permissions = models.ManyToManyField(
+    #     Permission, related_name='member_user_permissions')
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
     objects = MemberManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'phone_number']
+    REQUIRED_FIELDS = ['username', 'phone_number', 'location',]
 
     def __str__(self):
         """
@@ -139,6 +139,9 @@ class Otp(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
 
+    def __str__(self):
+        return self.otp_code
+
 
 class PendingUserModel(models.Model):
     """
@@ -159,3 +162,7 @@ class PendingUserModel(models.Model):
     phone_number = models.CharField(max_length=15)
     location = models.CharField(max_length=20)
     password = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.username
+    

@@ -9,6 +9,7 @@ from main.serializers import WasteCategorySerializer
 # View for fetching environmental tips
 
 
+
 class EnvironmentalTipView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]

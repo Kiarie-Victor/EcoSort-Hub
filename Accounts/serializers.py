@@ -30,6 +30,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         Returns:
             Member: The newly created Member instance.
         """
+        print(validated_data)
         user = get_user_model().objects.create_user(**validated_data)
         return user
 
@@ -49,17 +50,6 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, data):
-        """
-        Method to validate user login credentials.
-
-        Args:
-            data (dict): Login credentials.
-
-        Returns:
-            dict: Validated login credentials along with authenticated user.
-        Raises:
-            serializers.ValidationError: If the provided credentials are invalid.
-        """
         email = data.get('email')
         password = data.get('password')
         request = self.context.get('request')
@@ -76,7 +66,7 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
-class PendingDataSerializer(serializers.Serializer, ValidationMixin):
+class PendingDataSerializer(serializers.Serializer):
     """
     Serializer for pending user registration data.
 
@@ -102,4 +92,31 @@ class MemberSerializer(serializers.Serializer, ValidationMixin):
     phone_number = serializers.CharField()
     location = serializers.CharField()
     email = serializers.CharField()
+
+class OtpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Otp
+        fields = ['otp_code']
+
+class ProfileUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    location = serializers.CharField()
+    phone_number = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, data): 
+        username = data.get['username']
+        location = data.get['location']
+        password = data.get['password']
+        request = self.context.get['request']
+
+        user_email = request.email
+
+        user = Member.objects.get(email=user_email)
+        if Member.objects.filter(username=username).exists():
+            raise serializers.ValidationError("Username taken.")
+        else:
+            user.username = username
+        if Member.objects.filter(phone_number=phone_number).exists():
+            raise serializers.ValidationError("Cannot update number. ")
 
